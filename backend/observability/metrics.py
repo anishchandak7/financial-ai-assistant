@@ -15,6 +15,9 @@ class MetricsRegistry:
         self._llm_tokens: Dict[str, Dict[str, int]] = {
             "total": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
         }
+        self._rag_ingestions_total: Dict[str, int] = {}
+        self._rag_retrievals_total: Dict[str, int] = {}
+        self._rag_eval_scores: Dict[str, List[float]] = {}
 
     def record_http_request(self, method: str, path: str, status_code: int, duration_ms: float):
         with self._lock:
@@ -51,6 +54,23 @@ class MetricsRegistry:
             self._llm_tokens["total"]["prompt_tokens"] += prompt_tokens
             self._llm_tokens["total"]["completion_tokens"] += completion_tokens
             self._llm_tokens["total"]["total_tokens"] += (prompt_tokens + completion_tokens)
+
+    def record_rag_ingestion(self, collection: str, file_type: str, chunk_count: int, success: bool = True):
+        with self._lock:
+            key = f"{collection} {file_type} {'success' if success else 'failed'}"
+            self._rag_ingestions_total[key] = self._rag_ingestions_total.get(key, 0) + chunk_count
+
+    def record_rag_retrieval(self, collection: str, chunk_count: int):
+        with self._lock:
+            self._rag_retrievals_total[collection] = self._rag_retrievals_total.get(collection, 0) + chunk_count
+
+    def record_rag_eval(self, metric_name: str, score: float):
+        with self._lock:
+            if metric_name not in self._rag_eval_scores:
+                self._rag_eval_scores[metric_name] = []
+            if len(self._rag_eval_scores[metric_name]) >= 200:
+                self._rag_eval_scores[metric_name].pop(0)
+            self._rag_eval_scores[metric_name].append(score)
 
     def get_summary(self) -> Dict[str, Any]:
         """Returns structured JSON summary of metrics."""

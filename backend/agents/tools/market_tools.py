@@ -5,10 +5,8 @@ from langchain_core.tools import tool
 from langchain_core.documents.base import Document
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_chroma import Chroma
-
-from rag.vector_store import vector_store
-from rag.embeddings import embedding_layer
+from rag.retriever import financial_retriever
+from rag.vector_store import FinancialCollection
 from core.config import settings
 from observability.logger import get_custom_logger
 from utils.helpers import extract_text_from_content
@@ -187,7 +185,7 @@ def fetch_realtime_market_data(
 
 @tool
 def document_lookup(query: str) -> str:
-    """Search and retrieve information strictly from the MarketAnalysis vector collection using Multi-Query transformation.
+    """Search and retrieve information strictly from the MarketAnalysis vector collection using Self-Querying and Multi-Query RRF.
     
     Args:
         query: The market analysis question, topic, company name, or industry report to search for.
@@ -197,68 +195,30 @@ def document_lookup(query: str) -> str:
     """
     try:
         logger.info(msg=f"Executing document_lookup on MarketAnalysis collection for query: {query}")
-        
-        # 1. Multi-Query Transformation: Generate multiple query perspectives via LLM
-        multi_query_prompt = f"""You are an AI assistant helping search a financial research database.
-                                The user is asking a question related to market analysis, equities, economic reports, or industry trends.
-                                Generate 3 distinct search query variations (different perspectives, synonyms, or related technical queries) to maximize vector retrieval recall.
-                                Output exactly 3 queries, one per line. Do NOT include numbers, bullets, quotation marks, or preamble.
+        collection_name = FinancialCollection.MARKET_ANALYSIS.value
 
-                                User Query: {query}"""
-
-        llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_CONFIGS[0].get("model_name", "gemini-3.6-flash"),
-            api_key=settings.GEMINI_KEY
-        )
-        
-        mq_response = llm.invoke(input=[HumanMessage(content=multi_query_prompt)])
-        raw_text = extract_text_from_content(mq_response.content)
-
-        generated_queries = [q.strip() for q in raw_text.strip().split("\n") if q.strip() and not q.startswith("[{")]
-        
-        # Combine original query + generated variations
-        all_queries = [query] + generated_queries[:3]
-        logger.info(msg=f"Multi-Query variations generated ({len(all_queries)}): {all_queries}")
-
-        # 2. Query the MarketAnalysis Chroma collection
-        collection_name = settings.COLLECTION_NAMES[2]  # MarketAnalysis
-        retriever = Chroma(
-            collection_name=collection_name,
-            client=vector_store.client,
-            embedding_function=embedding_layer.get_embedding_function()
-        ).as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 3}
+        docs_list = financial_retriever.retrieve_sync(
+            query=query,
+            collection_name=FinancialCollection.MARKET_ANALYSIS,
+            top_k=4,
+            enable_multi_query=True,
+            enable_self_query=True,
+            min_relevance_threshold=0.25
         )
 
-        # 3. Retrieve and Deduplicate Documents across all queries
-        unique_docs: Dict[str, Document] = {}
-        for q in all_queries:
-            try:
-                retrieved = retriever.invoke(input=q)
-                for doc in retrieved:
-                    doc_id = doc.metadata.get("chunk_id") or hash(doc.page_content)
-                    if doc_id not in unique_docs:
-                        unique_docs[doc_id] = doc
-            except Exception as search_err:
-                logger.warning(msg=f"Sub-query search failed for '{q}': {search_err}")
-
-        docs_list = list(unique_docs.values())
         logger.info(msg=f"Total unique documents retrieved from {collection_name}: {len(docs_list)}")
 
         if not docs_list:
-            return f"No documents found in the {collection_name} collection for query: '{query}'."
+            return f"No proprietary documents found in the {collection_name} collection matching query: '{query}'."
 
-        # 4. Format Document Excerpts & Record Citations
         formatted_results = [f"### {collection_name} Documents Retrieved ({len(docs_list)} matches):"]
-        
+
         for idx, doc in enumerate(docs_list):
             meta = doc.metadata or {}
             file_name = meta.get("file_name", f"{collection_name}_Doc_{idx}")
             page = meta.get("page", "N/A")
             excerpt = doc.page_content.strip()
-            
-            # Record citation for UI rendering
+
             citation_item = {
                 "source_index": idx,
                 "quote": excerpt[:250] + "..." if len(excerpt) > 250 else excerpt,
@@ -268,14 +228,13 @@ def document_lookup(query: str) -> str:
             current_cits = _citations_var.get()
             current_cits.append(citation_item)
             _citations_var.set(current_cits)
-            
+
             formatted_results.append(
                 f"\n**[Source {idx}] File: {file_name} (Page: {page})**\n"
                 f"Content:\n{excerpt}\n---"
             )
 
         return "\n".join(formatted_results)
-
 
     except Exception as e:
         logger.error(msg=f"Error in document_lookup: {e}", exc_info=True)
@@ -307,10 +266,12 @@ def spawn_stock_analyzer(
     """
     try:
         from agents.specialists.stock_analyst import StockAnalyzerAgent
+        from agents.tools.memory_tools import get_current_session_id
         clean_ticker = ticker.strip().upper()
-        logger.info(msg=f"Market Analysis Agent spawning StockAnalyzerAgent for ticker: {clean_ticker} with query: {user_query}")
+        session_id = get_current_session_id()
+        logger.info(msg=f"Market Analysis Agent spawning StockAnalyzerAgent for ticker: {clean_ticker} with query: {user_query} (Session: {session_id})")
         sub_agent = StockAnalyzerAgent()
-        result = sub_agent.run(input_query=user_query, ticker=clean_ticker)
+        result = sub_agent.run(input_query=user_query, ticker=clean_ticker, session_id=session_id)
         return result.get("response", "No analysis returned from Stock Analyzer.")
     except Exception as e:
         logger.error(msg=f"Error spawning StockAnalyzerAgent for '{ticker}': {e}", exc_info=True)

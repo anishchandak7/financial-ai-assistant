@@ -89,20 +89,42 @@ def triage_and_route(state: GraphState) -> GraphState:
             state["routing_decisions"] = ["Conversational Agent"]
             return state
 
-        # 3. LLM-Based Adaptive Routing
+        # 3. LLM-Based Adaptive Routing with Session Context Awareness
         try:
+            session_id = state.get("session_id")
+            context_hint = ""
+            if session_id:
+                from memory.manager import agent_memory_manager
+                session_info = agent_memory_manager.get_session_summary_for_router(session_id)
+                active_ticker = session_info.get("active_ticker")
+                last_agent = session_info.get("last_active_agent")
+                if active_ticker or last_agent:
+                    context_hint = f"\n[Session Context: Active Ticker = {active_ticker or 'None'}, Last Active Agent = {last_agent or 'None'}]"
+
             llm = ChatGoogleGenerativeAI(
                 model=model_name,
                 api_key=settings.GEMINI_KEY
             )
             structured_router = llm.with_structured_output(AdaptiveRouterResponse)
+            router_input = f"{input_query}{context_hint}" if context_hint else input_query
+
             decision: AdaptiveRouterResponse = structured_router.invoke([
                 SystemMessage(content=ROUTER_SYSTEM_PROMPT),
-                HumanMessage(content=input_query)
+                HumanMessage(content=router_input)
             ])
 
             selected_agent = decision.intent
-            logger.info(f"Adaptive router selected: [{selected_agent}] (reason: {decision.reasoning})")
+            logger.info(f"Adaptive router selected: [{selected_agent}] (reason: {decision.reasoning}, ticker: {decision.ticker_symbol})")
+
+            # If a ticker was extracted, record in session context
+            if decision.ticker_symbol and session_id:
+                from memory.manager import agent_memory_manager
+                agent_memory_manager.update_working_memory(
+                    session_id=session_id,
+                    agent_name=selected_agent,
+                    key="active_ticker",
+                    value=decision.ticker_symbol.upper()
+                )
 
             state["is_blocked"] = False
             state["current_intent"] = selected_agent

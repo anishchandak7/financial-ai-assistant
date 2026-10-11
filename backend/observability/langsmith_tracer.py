@@ -50,3 +50,25 @@ def check_langsmith_status() -> Dict[str, Any]:
             else "LangSmith tracing is disabled. Set LANGSMITH_API_KEY in backend/.env to activate."
         )
     }
+
+def log_rag_run_feedback(
+    run_id: str,
+    faithfulness: float,
+    answer_relevance: float,
+    context_relevance: float,
+    overall_rag_score: Optional[float] = None
+):
+    """Attaches reference-free evaluation metrics as structured feedback on a LangSmith trace run."""
+    client = get_langsmith_client()
+    if not client or not run_id:
+        return
+    try:
+        client.create_feedback(run_id, key="faithfulness", score=faithfulness)
+        client.create_feedback(run_id, key="answer_relevance", score=answer_relevance)
+        client.create_feedback(run_id, key="context_relevance", score=context_relevance)
+        if overall_rag_score is not None:
+            client.create_feedback(run_id, key="overall_rag_score", score=overall_rag_score)
+        logger.info(f"Attached reference-free evaluation feedback to LangSmith run: {run_id}")
+    except Exception as e:
+        logger.warning(f"Failed to log feedback to LangSmith for run '{run_id}': {e}")
+

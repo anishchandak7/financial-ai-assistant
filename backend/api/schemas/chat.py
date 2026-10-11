@@ -9,4 +9,5 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     success: bool
     result: Dict[str, Any]
+    session_id: Optional[str] = Field(None, description="Active conversation session ID")
     error: Optional[str] = None
