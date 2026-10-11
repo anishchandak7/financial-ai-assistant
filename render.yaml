@@ -16,8 +16,16 @@ services:
       - key: COLLECTION_NAMES
         value: Finance, Portfolio, MarketAnalysis, Goals, News, Tax
       - key: LLM_CONFIGS
-        value: '[{"display_name":"Gemini3.6Flash","model_name":"gemini-3.6-flash"}]'
+        value: '[{"display_name":"Gemini 3.8 Flash","model_name":"gemini-3.8-flash"},{"display_name":"Gemini 3.6 Flash","model_name":"gemini-3.6-flash"}]'
       - key: MARKETS
         value: US, GB, ASIA, EUROPE, RATES, COMMODITIES, CURRENCIES, CRYPTOCURRENCIES
+      - key: ALLOWED_ORIGINS
+        value: "*"
       - key: LANGSMITH_TRACING
-        value: "false"
+        value: "true"
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: LANGSMITH_PROJECT
+        value: financial-ai-assistant
+      - key: LANGSMITH_ENDPOINT
+        value: https://api.smith.langchain.com

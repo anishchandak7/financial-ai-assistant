@@ -42,7 +42,10 @@ class Config:
         """Required JSON array of LLM configs. Validates JSON formatting."""
         raw_configs = os.getenv("LLM_CONFIGS")
         if not raw_configs:
-            return [{"display_name": "Gemini 3.6 Flash", "model_name": "gemini-3.6-flash"}]
+            return [
+                {"display_name": "Gemini 3.8 Flash", "model_name": "gemini-3.8-flash"},
+                {"display_name": "Gemini 3.6 Flash", "model_name": "gemini-3.6-flash"},
+            ]
         
         try:
             parsed_json = json.loads(raw_configs)
