@@ -1,0 +1,32 @@
+[project]
+name = "financial-ai-assistant"
+version = "0.1.0"
+description = "Finance AI Assistant: A FastAPI & React-based application that leverages Google Gemini LLM, LangGraph ReAct agents, and ChromaDB to provide financial insights, real-time market analysis, and portfolio recommendations."
+readme = "README.md"
+authors = [
+    { name = "Anish Chandak"}
+]
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb>=1.5.9",
+    "fastapi>=0.141.1",
+    "google-genai>=2.16.0",
+    "langchain>=1.3.14",
+    "langchain-chroma>=1.1.0",
+    "langchain-community>=0.4.2",
+    "langchain-google-genai>=4.3.2",
+    "langgraph>=1.2.10",
+    "pypdfium2>=5.12.1",
+    "python-dotenv>=1.2.2",
+    "python-multipart>=0.0.32",
+    "rapidocr>=3.9.2",
+    "uvicorn>=0.52.0",
+    "yfinance>=1.5.2",
+]
+
+[tool.uv]
+package = false
+
+[build-system]
+requires = ["uv_build>=0.12.0,<0.13.0"]
+build-backend = "uv_build"

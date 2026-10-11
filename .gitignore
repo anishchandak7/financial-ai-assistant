@@ -6,12 +6,27 @@ dist/
 wheels/
 *.egg-info
 .mypy_cache/
+.pytest_cache/
+
+# Node & Frontend build
+node_modules/
+webapp/node_modules/
+webapp/dist/
+.eslintcache
+.vite/
 
 # Virtual environments & secrets
 .venv/
+backend/.venv/
 .env
+backend/.env
+webapp/.env
+webapp/.env.local
+*.log
 app.log
+backend/app.log
 .python-version
+backend/.python-version
 
 # Agent caches & notebook checkpoints
 .agents/
@@ -25,5 +40,6 @@ data/*
 vectorstore/*
 !vectorstore/.gitkeep
 
-.env.example
 uv.lock
+backend/uv.lock
+
