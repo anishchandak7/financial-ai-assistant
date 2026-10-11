@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: financial-ai-assistant
+    runtime: python
+    plan: free
+    buildCommand: "bash build.sh"
+    startCommand: "uvicorn server:app --host 0.0.0.0 --port $PORT --app-dir backend"
+    healthCheckPath: "/api/health"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: GEMINI_KEY
+        sync: false
+      - key: CHROMA_DB_PATH
+        value: vectorstore/chromadb
+      - key: COLLECTION_NAMES
+        value: Finance, Portfolio, MarketAnalysis, Goals, News, Tax
+      - key: LLM_CONFIGS
+        value: '[{"display_name":"Gemini3.6Flash","model_name":"gemini-3.6-flash"}]'
+      - key: MARKETS
+        value: US, GB, ASIA, EUROPE, RATES, COMMODITIES, CURRENCIES, CRYPTOCURRENCIES
+      - key: LANGSMITH_TRACING
+        value: "false"

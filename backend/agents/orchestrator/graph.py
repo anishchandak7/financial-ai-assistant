@@ -51,8 +51,9 @@ def input_guardrail_node(state: GraphState) -> GraphState:
 def conversational_node(state: GraphState) -> GraphState:
     query = state.get("input_query", "")
     model_name = state.get("model_name")
+    session_id = state.get("session_id")
     agent = ConversationalAgent(model_name=model_name)
-    result = agent.run(input_query=query)
+    result = agent.run(input_query=query, session_id=session_id)
 
     if "agent_output" not in state or state["agent_output"] is None:
         state["agent_output"] = {}
@@ -63,8 +64,9 @@ def conversational_node(state: GraphState) -> GraphState:
 def market_analysis_node(state: GraphState) -> GraphState:
     query = state.get("input_query", "")
     model_name = state.get("model_name")
+    session_id = state.get("session_id")
     agent = MarketAnalysisAgent(model_name=model_name)
-    result = agent.run(input_query=query)
+    result = agent.run(input_query=query, session_id=session_id)
 
     if "agent_output" not in state or state["agent_output"] is None:
         state["agent_output"] = {}
@@ -81,8 +83,9 @@ def market_analysis_node(state: GraphState) -> GraphState:
 def stock_analyst_node(state: GraphState) -> GraphState:
     query = state.get("input_query", "")
     model_name = state.get("model_name")
+    session_id = state.get("session_id")
     agent = StockAnalyzerAgent(model_name=model_name)
-    result = agent.run(input_query=query)
+    result = agent.run(input_query=query, session_id=session_id)
 
     if "agent_output" not in state or state["agent_output"] is None:
         state["agent_output"] = {}
@@ -93,8 +96,9 @@ def stock_analyst_node(state: GraphState) -> GraphState:
 def finance_qa_node(state: GraphState) -> GraphState:
     query = state.get("input_query", "")
     model_name = state.get("model_name")
+    session_id = state.get("session_id")
     agent = FinanceQAAgent(model_name=model_name)
-    result = agent.run(input_query=query)
+    result = agent.run(input_query=query, session_id=session_id)
 
     if "agent_output" not in state or state["agent_output"] is None:
         state["agent_output"] = {}
@@ -102,6 +106,8 @@ def finance_qa_node(state: GraphState) -> GraphState:
 
     if result.get("citations"):
         state["citations"] = result["citations"]
+    if result.get("retrieved_contexts"):
+        state["retrieved_contexts"] = result["retrieved_contexts"]
     return state
 
 

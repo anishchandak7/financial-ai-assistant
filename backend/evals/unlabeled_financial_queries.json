@@ -1,0 +1,32 @@
+[
+  {
+    "id": "query_01",
+    "query": "What is the primary difference between a traditional 401(k) and a Roth 401(k) regarding contribution tax advantages and distributions?",
+    "target_collection": "Finance",
+    "domain": "Retirement & Tax Concepts"
+  },
+  {
+    "id": "query_02",
+    "query": "How is the Debt-to-Equity ratio calculated and what financial condition does a ratio greater than 2.0 indicate?",
+    "target_collection": "Finance",
+    "domain": "Financial Analysis & Ratios"
+  },
+  {
+    "id": "query_03",
+    "query": "What are the key revenue drivers and data center segment growth metrics reported by NVIDIA in fiscal year 2024?",
+    "target_collection": "MarketAnalysis",
+    "domain": "Equity & Earnings Research"
+  },
+  {
+    "id": "query_04",
+    "query": "Explain how the CBOE Volatility Index (VIX) is calculated and what market sentiment an elevated reading reflects.",
+    "target_collection": "MarketAnalysis",
+    "domain": "Macroeconomic Indicators"
+  },
+  {
+    "id": "query_05",
+    "query": "What is the difference between Operating Cash Flow and Free Cash Flow, and why do analysts prioritize Free Cash Flow?",
+    "target_collection": "Finance",
+    "domain": "Corporate Accounting"
+  }
+]

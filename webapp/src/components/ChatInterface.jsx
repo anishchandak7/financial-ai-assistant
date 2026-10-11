@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MessageBubble from './MessageBubble';
-import { sendChatMessage } from '../services/api';
+import { sendChatMessage, resetChatSession } from '../services/api';
 
 export default function ChatInterface({ activeModel, onShowToast, onOpenUpload }) {
+  const [sessionId, setSessionId] = useState(() => 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now());
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -23,6 +24,25 @@ export default function ChatInterface({ activeModel, onShowToast, onOpenUpload }
     scrollToBottom();
   }, [messages, isLoading]);
 
+  const handleResetChat = async () => {
+    try {
+      if (sessionId) {
+        await resetChatSession(sessionId);
+      }
+      const newSess = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+      setSessionId(newSess);
+      setMessages([
+        {
+          role: 'assistant',
+          content: 'Session memory cleared. Starting a fresh conversation! What would you like to analyze today?'
+        }
+      ]);
+      if (onShowToast) onShowToast("Started new chat session", "info");
+    } catch (err) {
+      console.error("Failed to reset session:", err);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e?.preventDefault();
     const query = inputQuery.trim();
@@ -34,7 +54,11 @@ export default function ChatInterface({ activeModel, onShowToast, onOpenUpload }
     setIsLoading(true);
 
     try {
-      const data = await sendChatMessage(query, activeModel);
+      const data = await sendChatMessage(query, activeModel, sessionId);
+      if (data.session_id && data.session_id !== sessionId) {
+        setSessionId(data.session_id);
+      }
+
       if (data.success) {
         setMessages([...updatedMessages, { role: 'assistant', content: data.result }]);
       } else {
@@ -104,6 +128,25 @@ export default function ChatInterface({ activeModel, onShowToast, onOpenUpload }
       {/* Floating Google Gemini Prompt Bar */}
       <footer className="border-t border-[#3c4043]/30 bg-[#1e1f20]/95 backdrop-blur-xl p-4 sticky bottom-0 z-20">
         <div className="max-w-4xl mx-auto space-y-3">
+          {/* New Chat Button (Shown during ongoing conversation) */}
+          {messages.length > 1 && (
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[11px] text-[#9aa0a6] flex items-center space-x-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#34a853]"></span>
+                <span>Active Session Memory</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleResetChat}
+                className="text-xs px-2.5 py-1 rounded-full bg-[#282a2c] hover:bg-[#333538] text-[#c4c7c5] hover:text-[#8ab4f8] border border-[#3c4043] flex items-center space-x-1 transition shadow-sm"
+                title="Clear session memory and start new chat"
+              >
+                <span className="material-symbols-outlined text-xs">restart_alt</span>
+                <span>New Chat</span>
+              </button>
+            </div>
+          )}
+
           {/* Suggestion Chips (Shown on fresh conversation) */}
           {messages.length <= 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">

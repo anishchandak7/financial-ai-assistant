@@ -55,8 +55,11 @@ You have access to two specialized tools:
    - **Technical Consensus & Outlook**: Clear directional bias and risk considerations. Note that insights are for educational/informational purposes only.
 """
 
+from memory.manager import agent_memory_manager
+from agents.tools.memory_tools import set_current_session_id
+
 class StockAnalyzerAgent(BaseSpecialistAgent):
-    """Quantitative Technical Analysis specialist agent calculating mathematical indicators."""
+    """Quantitative Technical Analysis specialist agent calculating mathematical indicators with session memory."""
 
     def __init__(self, model_name: Optional[str] = None) -> None:
         self.model_name = model_name or settings.LLM_CONFIGS[0].get("model_name", "gemini-3.8-flash")
@@ -76,16 +79,41 @@ class StockAnalyzerAgent(BaseSpecialistAgent):
     def name(self) -> str:
         return "Stock Analyzer Agent"
 
-    def run(self, input_query: str, ticker: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+    def run(self, input_query: str, ticker: Optional[str] = None, session_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         token = current_agent_name.set(self.name)
+        session_token = None
+        if session_id:
+            session_token = set_current_session_id(session_id)
+
         with trace_span("agent.stock_analyst", {"ticker": ticker, "query": input_query[:80]}):
             try:
-                formatted_query = f"Ticker: {ticker.upper()}\nQuery: {input_query}" if ticker else input_query
-                logger.info(f"StockAnalyzerAgent executing: {formatted_query[:100]}")
+                # If ticker is missing, check if session memory has an active ticker
+                effective_ticker = ticker
+                if not effective_ticker and session_id:
+                    session_info = agent_memory_manager.get_session_summary_for_router(session_id)
+                    effective_ticker = session_info.get("active_ticker")
+
+                formatted_query = f"Ticker: {effective_ticker.upper()}\nQuery: {input_query}" if effective_ticker else input_query
+
+                # Check for existing working memory scratchpad
+                working_summary = ""
+                if session_id:
+                    working_summary = agent_memory_manager.get_working_memory_summary(session_id, self.name)
+                if working_summary:
+                    formatted_query = f"{working_summary}\n\n{formatted_query}"
+
+                logger.info(f"StockAnalyzerAgent executing: {formatted_query[:100]} (Session: {session_id})")
+
+                # Retrieve dialogue history for Stock Analyzer Agent
+                agent_messages = []
+                if session_id:
+                    history = agent_memory_manager.get_messages_for_agent(session_id, self.name, max_turns=6)
+                    agent_messages.extend(history)
+                agent_messages.append(HumanMessage(content=formatted_query))
 
                 callback = AgentObservabilityCallbackHandler(agent_name=self.name)
                 result = self.agent.invoke(
-                    input={"messages": [HumanMessage(content=formatted_query)]},
+                    input={"messages": agent_messages},
                     config={"callbacks": [callback]}
                 )
 
@@ -93,9 +121,26 @@ class StockAnalyzerAgent(BaseSpecialistAgent):
                 final_content = extract_text_from_content(messages[-1].content) if messages else ""
                 metrics.record_agent_execution(self.name, 1.0, success=True)
 
+                # Persist turn in Stock Analyzer's dedicated memory partition
+                if session_id:
+                    agent_memory_manager.add_turn(
+                        session_id=session_id,
+                        agent_name=self.name,
+                        user_query=input_query,
+                        agent_response=final_content,
+                        metadata={"ticker": effective_ticker.upper() if effective_ticker else None}
+                    )
+                    if effective_ticker:
+                        agent_memory_manager.update_working_memory(
+                            session_id=session_id,
+                            agent_name=self.name,
+                            key="last_analyzed_ticker",
+                            value=effective_ticker.upper()
+                        )
+
                 return {
                     "response": final_content,
-                    "ticker": ticker.upper() if ticker else None
+                    "ticker": effective_ticker.upper() if effective_ticker else None
                 }
             except Exception as e:
                 metrics.record_agent_execution(self.name, 1.0, success=False)

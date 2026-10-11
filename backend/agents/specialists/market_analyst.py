@@ -48,12 +48,15 @@ Structure your final answer clearly and professionally:
 - **Strategic Analyst Takeaway**: Catalysts, risks, and balanced outlook (informational purposes only).
 """
 
+from memory.manager import agent_memory_manager
+from agents.tools.memory_tools import refer_agent_memory, set_current_session_id
+
 class MarketAnalysisAgent(BaseSpecialistAgent):
-    """Institutional Market Analysis Lead Agent orchestrating macro research and technical sub-agents."""
+    """Institutional Market Analysis Lead Agent orchestrating macro research, technical sub-agents, and session memory."""
 
     def __init__(self, model_name: Optional[str] = None) -> None:
         self.model_name = model_name or settings.LLM_CONFIGS[0].get("model_name", "gemini-3.8-flash")
-        self.tools = [fetch_realtime_market_data, document_lookup, spawn_stock_analyzer]
+        self.tools = [fetch_realtime_market_data, document_lookup, spawn_stock_analyzer, refer_agent_memory]
         self.llm = ChatGoogleGenerativeAI(
             model=self.model_name,
             api_key=settings.GEMINI_KEY
@@ -69,16 +72,34 @@ class MarketAnalysisAgent(BaseSpecialistAgent):
     def name(self) -> str:
         return "Market Analysis Agent"
 
-    def run(self, input_query: str, **kwargs) -> Dict[str, Any]:
+    def run(self, input_query: str, session_id: Optional[str] = None, **kwargs) -> Dict[str, Any]:
         token = current_agent_name.set(self.name)
         reset_agent_citations()
+        session_token = None
+        if session_id:
+            session_token = set_current_session_id(session_id)
+
         with trace_span("agent.market_analysis", {"query": input_query[:80], "model": self.model_name}):
             try:
-                logger.info(f"MarketAnalysisAgent executing query: {input_query[:80]}")
+                formatted_query = input_query
+                working_summary = ""
+                if session_id:
+                    working_summary = agent_memory_manager.get_working_memory_summary(session_id, self.name)
+                if working_summary:
+                    formatted_query = f"{working_summary}\n\n{formatted_query}"
+
+                logger.info(f"MarketAnalysisAgent executing query: {formatted_query[:80]} (Session: {session_id})")
+
+                agent_messages = []
+                if session_id:
+                    history = agent_memory_manager.get_messages_for_agent(session_id, self.name, max_turns=6)
+                    agent_messages.extend(history)
+                agent_messages.append(HumanMessage(content=formatted_query))
+
                 callback = AgentObservabilityCallbackHandler(agent_name=self.name)
 
                 result = self.agent.invoke(
-                    input={"messages": [HumanMessage(content=input_query)]},
+                    input={"messages": agent_messages},
                     config={"callbacks": [callback]}
                 )
 
@@ -88,6 +109,16 @@ class MarketAnalysisAgent(BaseSpecialistAgent):
 
                 metrics.record_agent_execution(self.name, 1.0, success=True)
                 logger.info(f"MarketAnalysisAgent completed. Citations captured: {len(citations)}")
+
+                # Persist turn in Market Analysis Agent's isolated memory partition
+                if session_id:
+                    agent_memory_manager.add_turn(
+                        session_id=session_id,
+                        agent_name=self.name,
+                        user_query=input_query,
+                        agent_response=final_content,
+                        metadata={"citations_count": len(citations)}
+                    )
 
                 return {
                     "response": final_content,
