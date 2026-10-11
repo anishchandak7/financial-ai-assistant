@@ -27,14 +27,14 @@ class Config:
     @property
     def MARKETS(self) -> str | None:
         """Optional market configurations."""
-        return os.getenv("MARKETS")
+        return os.getenv("MARKETS", "US, GB, ASIA, EUROPE, RATES, COMMODITIES, CURRENCIES, CRYPTOCURRENCIES")
 
     @property
     def GEMINI_KEY(self) -> str:
         """Required API key for Gemini. Fails fast if missing."""
-        key = os.getenv("GEMINI_KEY")
+        key = os.getenv("GEMINI_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not key:
-            raise KeyError("Critical environment variable 'GEMINI_KEY' is missing.")
+            raise KeyError("Critical environment variable 'GEMINI_KEY' (or 'GEMINI_API_KEY') is missing.")
         return key
 
     @property
@@ -42,7 +42,7 @@ class Config:
         """Required JSON array of LLM configs. Validates JSON formatting."""
         raw_configs = os.getenv("LLM_CONFIGS")
         if not raw_configs:
-            raise KeyError("Critical environment variable 'LLM_CONFIGS' is missing.")
+            return [{"display_name": "Gemini 3.6 Flash", "model_name": "gemini-3.6-flash"}]
         
         try:
             parsed_json = json.loads(raw_configs)
@@ -55,9 +55,7 @@ class Config:
     @property
     def CHROMA_DB_PATH(self) -> str:
         """Path to Chroma DB. Check if folder structure is present or not."""
-        chromadb_path = os.getenv("CHROMA_DB_PATH")
-        if chromadb_path is None:
-            raise KeyError("'CHROMA_DB_PATH' is not set in env")
+        chromadb_path = os.getenv("CHROMA_DB_PATH", "vectorstore/chromadb")
         if not os.path.isabs(chromadb_path):
             chromadb_path = str(PROJECT_ROOT / chromadb_path)
         if not os.path.exists(chromadb_path):
@@ -66,9 +64,7 @@ class Config:
     
     @property
     def COLLECTION_NAMES(self) -> list:
-        collection_names = os.getenv("COLLECTION_NAMES")
-        if collection_names is None:
-            raise KeyError("'COLLECTION_NAMES' is not set in env")
+        collection_names = os.getenv("COLLECTION_NAMES", "Finance, Portfolio, MarketAnalysis, Goals, News, Tax")
         collection_names_list = [collection.strip() for collection in collection_names.split(",")]
         if not collection_names_list:
             raise ValueError("'COLLECTION_NAMES' is set as empty string. Define atleast one collection name from\n(Finance, Portfolio, MarketAnalysis, Goals, News, Tax)")

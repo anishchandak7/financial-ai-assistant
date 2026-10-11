@@ -25,8 +25,7 @@ webapp/.env.local
 *.log
 app.log
 backend/app.log
-.python-version
-backend/.python-version
+
 
 # Agent caches & notebook checkpoints
 .agents/
@@ -42,4 +41,5 @@ vectorstore/*
 
 uv.lock
 backend/uv.lock
-
+.archify/*
+skills-lock.json
