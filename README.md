@@ -16,7 +16,7 @@
 
 - [Executive Summary](#-executive-summary)
 - [System Architecture](#-system-architecture)
-  - [Interactive Architecture Diagram](#interactive-architecture-diagram)
+  - [Architecture Topology Diagram](#architecture-topology-diagram)
   - [How It Works: Component Breakdown](#how-it-works-component-breakdown)
   - [End-to-End System Flow Diagram](#end-to-end-system-flow-diagram)
   - [Step-by-Step Request Lifecycle](#step-by-step-request-lifecycle)
@@ -58,28 +58,76 @@ This platform solves those problems by design:
 
 ## 🏛️ System Architecture
 
-### Interactive Architecture Diagram
+### Architecture Topology Diagram
 
-An interactive diagram generated with **Archify** illustrates the complete topology:
+The multi-agent financial assistant topology illustrates the end-to-end separation of concerns across client, gateway, orchestration, specialist agents, and data storage:
 
 [![Financial AI Assistant Architecture](docs/architecture.svg)](docs/architecture.html)
 
-🔗 **[Click here to view the Interactive Standalone Architecture Diagram (`docs/architecture.html`)](docs/architecture.html)**  
+> 💡 **Interactive Architecture Viewer**: An interactive canvas generated with **Archify** is available at [`docs/architecture.html`](docs/architecture.html). You can open it directly in your browser (`docs/architecture.html`) to pan, zoom, inspect component dependencies, and trace data contracts. *(Note: GitHub Markdown does not execute live `<iframe>` tags for security reasons, so the interactive canvas is provided as a standalone viewer file).*
 
 <details>
-<summary><b>🔍 Embed / View Raw HTML Architecture Viewer</b></summary>
+<summary><b>🔍 View Native Mermaid Architecture Topology</b></summary>
 
-You can embed the standalone interactive architecture in any webpage, documentation portal, or iframe using the relative path:
+```mermaid
+graph TB
+    subgraph ClientTier ["1. Client Tier"]
+        User["User / Investor\n(Browser / Mobile)"]
+        UI["React Web Dashboard\n(Vite + Tailwind :5173)"]
+    end
 
-```html
-<iframe 
-  src="./docs/architecture.html" 
-  width="100%" 
-  height="750px" 
-  frameborder="0" 
-  style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);"
-  title="Financial AI Assistant System Architecture">
-</iframe>
+    subgraph SecurityTier ["2. Gateway & Security"]
+        API["FastAPI Gateway\n(:8000 REST API)"]
+        Guard["Safety Guardrail\n(Prompt Shield & Scanner)"]
+        Telemetry["LangSmith Telemetry\n(Audit & OTLP Traces)"]
+    end
+
+    subgraph IntelligenceTier ["3. Orchestration & Intelligence"]
+        Router["AI Orchestrator\n(LangGraph StateGraph Router)"]
+        Memory[("Session Memory Manager\n(Multi-Turn Context)")]
+        Gemini["Google Gemini 3.6 Flash\n(Foundation Model)"]
+        Compliance["Compliance Guard\n(Regulatory Disclaimers)"]
+    end
+
+    subgraph AgentTier ["4. Specialist Agent Squad"]
+        ChatAgent["Conversational Guide\n(Greetings & Help)"]
+        MarketAgent["Market Analyst Agent\n(Macro Indices & News)"]
+        StockAgent["Stock Analyst Agent\n(Equities & Indicators)"]
+        QAAgent["Finance Q&A Agent\n(RAG Document Research)"]
+    end
+
+    subgraph DataTier ["5. Data & Storage Tier"]
+        YFinance["Yahoo Finance API\n(Live Quotes & OHLCV)"]
+        TechEngine["Technical Indicators Engine\n(RSI, MACD, SMAs)"]
+        RAGService["RAG Vector Service\n(Gemini Embeddings)"]
+        Chroma[("ChromaDB Vector Store\n(10-K Filings & PDFs)")]
+    end
+
+    User -->|"HTTPS"| UI
+    UI -->|"POST /api/chat"| API
+    API -.->|"Distributed Tracing"| Telemetry
+    API -->|"Input Validation"| Guard
+    Guard -->|"Safe Query"| Router
+    Router <-->|"Isolated History"| Memory
+    Router <-->|"Intent Triage"| Gemini
+
+    Router --> ChatAgent
+    Router --> MarketAgent
+    Router --> StockAgent
+    Router --> QAAgent
+
+    MarketAgent -->|"Live Quotes & News"| YFinance
+    StockAgent -->|"Historical OHLCV Prices"| YFinance
+    StockAgent -->|"Deterministic Math"| TechEngine
+    QAAgent -->|"Semantic Chunking"| RAGService
+    RAGService -->|"Vector Search"| Chroma
+
+    ChatAgent --> Compliance
+    MarketAgent --> Compliance
+    StockAgent --> Compliance
+    QAAgent --> Compliance
+    Compliance -->|"Sanitized Response"| API
+    API -->|"Formatted JSON Payload"| UI
 ```
 
 </details>
