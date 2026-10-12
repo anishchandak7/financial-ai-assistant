@@ -15,6 +15,7 @@
 ## 📖 Table of Contents
 
 - [Executive Summary](#-executive-summary)
+- [Application Demo](#-application-demo)
 - [System Architecture](#-system-architecture)
   - [Architecture Topology Diagram](#architecture-topology-diagram)
   - [How It Works: Component Breakdown](#how-it-works-component-breakdown)
@@ -53,6 +54,20 @@ This platform solves those problems by design:
 3. **Grounded In Truth**: Questions about corporate reports are answered strictly using facts extracted from uploaded PDFs and indexed into a searchable vector knowledge base.
 4. **Safety & Guardrails**: Dangerous commands and prompt injections are filtered out at the door.
 5. **Regulatory Compliance**: Every financial response is automatically audited and stamped with mandatory compliance disclosures to protect users.
+
+---
+
+## 🎬 Application Demo
+
+Experience the **Financial AI Assistant** in action across real-time market analysis, automated stock technical charts, grounded corporate filing analysis (RAG), and multi-turn financial advisory:
+
+<div align="center">
+  <video src="https://raw.githubusercontent.com/anishchandak7/financial-ai-assistant/master/docs/demo.mp4" controls="controls" muted="muted" width="100%" style="max-height: 520px; border-radius: 8px;">
+    <a href="docs/demo.mp4">▶ Click here to view the demo video</a>
+  </video>
+</div>
+
+> 🎬 **Demo Video Player**: [**▶ Open in GitHub Video Player**](docs/demo.mp4) &bull; [**Direct Download (MP4)**](https://raw.githubusercontent.com/anishchandak7/financial-ai-assistant/master/docs/demo.mp4)
 
 ---
 
@@ -352,7 +367,8 @@ financial-ai-assistant/
 │   └── server.py                     # Main FastAPI application server & SPA host
 ├── docs/                             # Documentation assets & diagram artifacts
 │   ├── architecture.html             # Standalone interactive architecture viewer
-│   └── architecture.svg              # Embedded architecture vector graphic
+│   ├── architecture.svg              # Embedded architecture vector graphic
+│   └── demo.mp4                      # Full application walkthrough & demo video
 ├── webapp/                           # React + Vite Frontend Application
 │   ├── src/
 │   │   ├── components/               # ChatInterface, MarketTicker, DocumentUploadModal
